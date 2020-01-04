@@ -50,18 +50,38 @@ var (
 	hetznerUsername string
 	hetznerPassword string
 	boxes           []Storagebox
-	diskUsage       = prometheus.NewGaugeVec(
+	labels          = []string{"id", "name", "product", "server"}
+	diskQuota       = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "storagebox",
+			Name:      "disk_quota",
+			Help:      "Total diskspace in MB",
+		},
+		labels,
+	)
+	diskUsage = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "storagebox",
 			Name:      "disk_usage",
-			Help:      "Used diskspace in MB",
+			Help:      "Total used diskspace in MB",
 		},
-		[]string{
-			"id",
-			"name",
-			"product",
-			"server",
+		labels,
+	)
+	diskUsageData = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "storagebox",
+			Name:      "disk_usage_data",
+			Help:      "Used diskspace by files in MB",
 		},
+		labels,
+	)
+	diskUsageSnapshots = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "storagebox",
+			Name:      "disk_usage_snapshots",
+			Help:      "Used diskspace by snapshots in MB",
+		},
+		labels,
 	)
 )
 
@@ -101,12 +121,33 @@ func updateMetrics() {
 	for {
 		updateBoxes()
 		for _, box := range boxes {
+			diskQuota.With(prometheus.Labels{
+				"id":      strconv.Itoa(box.ID),
+				"name":    box.Name,
+				"product": box.Product,
+				"server":  box.Server,
+			}).Set(box.DiskQuota)
+
 			diskUsage.With(prometheus.Labels{
 				"id":      strconv.Itoa(box.ID),
 				"name":    box.Name,
 				"product": box.Product,
 				"server":  box.Server,
 			}).Set(box.DiskUsage)
+
+			diskUsageData.With(prometheus.Labels{
+				"id":      strconv.Itoa(box.ID),
+				"name":    box.Name,
+				"product": box.Product,
+				"server":  box.Server,
+			}).Set(box.DiskUsageData)
+
+			diskUsageSnapshots.With(prometheus.Labels{
+				"id":      strconv.Itoa(box.ID),
+				"name":    box.Name,
+				"product": box.Product,
+				"server":  box.Server,
+			}).Set(box.DiskUsageSnapshots)
 
 		}
 		time.Sleep(30 * time.Second)
@@ -125,7 +166,11 @@ func main() {
 		log.Fatal("Please provide HETZNER_USER and HETZNER_PASS as environment variables")
 	}
 
+	prometheus.MustRegister(diskQuota)
 	prometheus.MustRegister(diskUsage)
+	prometheus.MustRegister(diskUsageData)
+	prometheus.MustRegister(diskUsageSnapshots)
+
 	go updateMetrics()
 
 	fmt.Printf("Listening on %q", listenAddr)
