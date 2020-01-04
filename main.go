@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -46,8 +47,10 @@ type Storagebox struct {
 }
 
 var (
-	boxes     []Storagebox
-	diskUsage = prometheus.NewGaugeVec(
+	hetznerUsername string
+	hetznerPassword string
+	boxes           []Storagebox
+	diskUsage       = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "storagebox",
 			Name:      "disk_usage",
@@ -63,12 +66,9 @@ var (
 )
 
 func updateBoxes() {
-	var username string = ""
-	var passwd string = ""
-
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", "https://robot-ws.your-server.de/storagebox", nil)
-	req.SetBasicAuth(username, passwd)
+	req.SetBasicAuth(hetznerUsername, hetznerPassword)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
@@ -82,7 +82,7 @@ func updateBoxes() {
 
 	for _, entry := range apiResponse {
 		req, err := http.NewRequest("GET", fmt.Sprintf("https://robot-ws.your-server.de/storagebox/%d", entry.Box.ID), nil)
-		req.SetBasicAuth(username, passwd)
+		req.SetBasicAuth(hetznerUsername, hetznerPassword)
 		resp, err = client.Do(req)
 		if err != nil {
 			log.Fatal(err)
@@ -118,6 +118,13 @@ const (
 )
 
 func main() {
+	hetznerUsername = os.Getenv("HETZNER_USER")
+	hetznerPassword = os.Getenv("HETZNER_PASS")
+
+	if hetznerUsername == "" || hetznerPassword == "" {
+		log.Fatal("Please provide HETZNER_USER and HETZNER_PASS as environment variables")
+	}
+
 	prometheus.MustRegister(diskUsage)
 	go updateMetrics()
 
