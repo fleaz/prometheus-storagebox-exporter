@@ -1,0 +1,14 @@
+[Unit]
+Description=Hetzner Storagebox Prometheus exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+Environment=HETZNER_USER=K123456
+Environment=HETZNER_PASS=topsecret
+ExecStart=/usr/local/bin/prometheus-storagebox-exporter
+
+[Install]
+WantedBy=multi-user.target
+
