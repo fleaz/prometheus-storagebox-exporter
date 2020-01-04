@@ -114,7 +114,7 @@ func updateMetrics() {
 }
 
 const (
-	listenAddr = ":2112"
+	listenAddr = ":9509"
 )
 
 func main() {
