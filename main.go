@@ -24,6 +24,13 @@ type APIBoxDetail struct {
 	Box Storagebox `json:"storagebox"`
 }
 
+type APIError struct {
+	Error struct {
+		Status int    `json:"status"`
+		Code   string `json:"code"`
+	} `json:"error"`
+}
+
 type Storagebox struct {
 	ID                   int     `json:"id"`
 	Login                string  `json:"login"`
@@ -91,9 +98,21 @@ func updateBoxes() {
 	req.SetBasicAuth(hetznerUsername, hetznerPassword)
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		return
 	}
+
 	bodyText, err := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 {
+		var apiErr APIError
+		err = json.Unmarshal(bodyText, &apiErr)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("API Error: %d - %s", apiErr.Error.Status, apiErr.Error.Code)
+	}
+
 	var apiResponse APIBoxList
 	err = json.Unmarshal(bodyText, &apiResponse)
 	if err != nil {
@@ -105,9 +124,19 @@ func updateBoxes() {
 		req.SetBasicAuth(hetznerUsername, hetznerPassword)
 		resp, err = client.Do(req)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			return
 		}
 		bodyText, err := ioutil.ReadAll(resp.Body)
+		if resp.StatusCode != 200 {
+			var apiErr APIError
+			err = json.Unmarshal(bodyText, &apiErr)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("API Error: %d - %s", apiErr.Error.Status, apiErr.Error.Code)
+		}
+
 		var box APIBoxDetail
 		err = json.Unmarshal(bodyText, &box)
 		if err != nil {
@@ -150,7 +179,10 @@ func updateMetrics() {
 			}).Set(box.DiskUsageSnapshots)
 
 		}
-		time.Sleep(30 * time.Second)
+
+		// Try to avoid rate limiting
+		// Limit is 200req / 1h
+		time.Sleep(60 * time.Second)
 	}
 }
 
