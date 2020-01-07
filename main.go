@@ -111,6 +111,7 @@ func updateBoxes() {
 			log.Fatal(err)
 		}
 		log.Printf("API Error: %d - %s", apiErr.Error.Status, apiErr.Error.Code)
+		return
 	}
 
 	var apiResponse APIBoxList
@@ -135,6 +136,7 @@ func updateBoxes() {
 				log.Fatal(err)
 			}
 			log.Printf("API Error: %d - %s", apiErr.Error.Status, apiErr.Error.Code)
+			return
 		}
 
 		var box APIBoxDetail
