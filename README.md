@@ -24,3 +24,24 @@ storagebox_disk_usage_data{id="1234",name="Backup",product="BX10",server="u12345
 # TYPE storagebox_disk_usage_snapshots gauge
 storagebox_disk_usage_snapshots{id="1234",name="Backup",product="BX10",server="u12345.your-storagebox.de"} 0
 ```
+
+# Running as docker container
+This exporter can be run as docker-image as well.
+Either build and run the image via the Dockerfile by running
+```sh
+docker build --tag storagebox-exporter .
+```
+
+then modify `.env` according to your user credentials and run the image:
+
+```
+docker run -d --name storagebox-exporter storagebox-exporter:main
+```
+
+or use:
+
+## docker-compose
+After modifying .env to your needs, install and run the container by running:
+```
+docker-compose up -d   # docker compose up -d
+```
