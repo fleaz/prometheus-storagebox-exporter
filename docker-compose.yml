@@ -1,0 +1,11 @@
+version: '2.1'
+services:
+  storagebox-exporter:
+    image: irrwitzer/storagebox-exporter:latest
+    container_name: storagebox-exporter
+    restart: always
+    environment:
+      - HETZNER_USER=${HETZNER_WS_USER}
+      - HETZNER_PASS=${HETZNER_WS_PASS}
+    ports:
+      - 9509:9509
