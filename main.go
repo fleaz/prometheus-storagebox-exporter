@@ -1,3 +1,5 @@
+// Copyright 2024 Felix Breidenstein <mail@felixbreidenstein.de>
+//
 package main
 
 import (
