@@ -1,4 +1,5 @@
 // Copyright 2024 Felix Breidenstein <mail@felixbreidenstein.de>
+// Original Source: https://github.com/fleaz/prometheus-storagebox-exporter
 //
 package main
 
