@@ -1,7 +1,8 @@
 version: '2.1'
 services:
   storagebox-exporter:
-    image: irrwitzer/storagebox-exporter:latest
+    #image: irrwitzer/storagebox-exporter:latest
+    build: .
     container_name: storagebox-exporter
     restart: always
     environment:
