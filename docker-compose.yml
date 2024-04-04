@@ -1,0 +1,11 @@
+version: '2.1'
+services:
+  storagebox-exporter:
+    # image: storagebox-exporter
+    build: .
+    container_name: storagebox-exporter
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 9509:9509
