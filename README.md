@@ -35,7 +35,7 @@ docker build --tag storagebox-exporter .
 then modify `.env` according to your user credentials and run the image:
 
 ```
-docker run -d --name storagebox-exporter storagebox-exporter:main
+docker run -d --name storagebox-exporter storagebox-exporter --env-file .env
 ```
 
 or use:
@@ -43,5 +43,5 @@ or use:
 ## docker-compose
 After modifying .env to your needs, install and run the container by running:
 ```
-docker-compose up -d   # docker compose up -d
+docker compose up -d   # or 'docker-compose up -d' on older systems
 ```
