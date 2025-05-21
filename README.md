@@ -1,13 +1,14 @@
 # prometheus-storagebox-exporter
 
-This tool talks to the [Hetzner
-API](https://robot.your-server.de/doc/webservice/de.html#storage-box) and
-gets a list of all [Storage
-Boxes](https://www.hetzner.de/storage/storage-box) in your account and exports their statistics as Prometheus metrics on port `<host>:9509/metrics`.
+This tool talks to the [Hetzner API](https://robot.your-server.de/doc/webservice/de.html#storage-box) and
+gets a list of all [Storage Boxes](https://www.hetzner.de/storage/storage-box) in your account and exports their
+statistics as Prometheus metrics on `<host>:9509/metrics`.
 
 ## Authentication
-Sadly the old Hetzner API only accepts BasicAuth as an authenticaton method for their API so this exporter needs your customer number and password for your Hetzner account.
-These variables gets passed to the tool as environment variables: `HETZNER_USER` and `HETZNER_PASS`
+To use the Robot API, you first need to create a "WebService" Account over
+[here](https://robot.hetzner.com/preferences/index).
+After choosing a passwor, you will get an email with the random username. These credentials can then be used without
+this tool.
 
 ## Exported Metrics 
 ```
@@ -25,23 +26,30 @@ storagebox_disk_usage_data{id="1234",name="Backup",product="BX10",server="u12345
 storagebox_disk_usage_snapshots{id="1234",name="Backup",product="BX10",server="u12345.your-storagebox.de"} 0
 ```
 
-# Running as docker container
-This exporter can be run as docker-image as well.
-Either build and run the image via the Dockerfile by running
+# Usage
+You need to provide your credentials (username and passwort) for the WebService account via environment variables. So
+after compiling the binary you could run it like
+
+```
+HETZNER_USER='...' HETZNER_PASS='...' ./prometheus-storagebox-exporter
+```
+
+then visit [localhost:9505/metrics](http://localhost:9505/metrics)
+
+# Running as Docker container
+This exporter can be run as Docker container as well.
+
+First you need to provide your credentials in the .env file.
+
+Then, either build and run the image manually with
+
 ```sh
 docker build --tag storagebox-exporter .
-```
-
-then modify `.env` according to your user credentials and run the image:
-
-```
 docker run -d --name storagebox-exporter storagebox-exporter --env-file .env
 ```
 
-or use:
+or use compose:
 
-## docker-compose
-After modifying .env to your needs, install and run the container by running:
 ```
-docker compose up -d   # or 'docker-compose up -d' on older systems
+docker compose up -d
 ```

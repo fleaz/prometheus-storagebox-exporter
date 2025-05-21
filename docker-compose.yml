@@ -1,7 +1,5 @@
-version: '2.1'
 services:
   storagebox-exporter:
-    # image: storagebox-exporter
     build: .
     container_name: storagebox-exporter
     restart: always

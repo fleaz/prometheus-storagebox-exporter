@@ -1,4 +1,4 @@
-FROM golang:1.22 AS builder
+FROM golang:alpine AS builder
 WORKDIR /go/src/prometheus-storagebox-exporter
 COPY . /go/src/prometheus-storagebox-exporter
 RUN CGO_ENABLED=0 GOOS=linux go build

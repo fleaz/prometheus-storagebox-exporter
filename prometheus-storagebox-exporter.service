@@ -7,6 +7,8 @@ After=network-online.target
 Type=simple
 Environment=HETZNER_USER=K123456
 Environment=HETZNER_PASS=topsecret
+# Or you could use a file
+# EnvironmentFile=/run/secret/hetzner
 ExecStart=/usr/local/bin/prometheus-storagebox-exporter
 
 [Install]
