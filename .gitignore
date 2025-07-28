@@ -1,2 +1,3 @@
 prometheus-storagebox-exporter
 .env
+.envrc

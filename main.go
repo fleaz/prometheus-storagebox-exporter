@@ -1,184 +1,92 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/fleaz/prometheus-storagebox-exporter/hetzner"
+
+	"github.com/imroc/req/v3"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type APIBoxList []struct {
-	Box struct {
-		ID int `json:"id"`
-	} `json:"storagebox"`
-}
-
-type APIBoxDetail struct {
-	Box Storagebox `json:"storagebox"`
-}
-
-type APIError struct {
-	Error struct {
-		Status int    `json:"status"`
-		Code   string `json:"code"`
-	} `json:"error"`
-}
-
-type Storagebox struct {
-	ID                   int     `json:"id"`
-	Login                string  `json:"login"`
-	Name                 string  `json:"name"`
-	Product              string  `json:"product"`
-	Cancelled            bool    `json:"cancelled"`
-	Locked               bool    `json:"locked"`
-	LinkedServer         int     `json:"linked_server"`
-	PaidUntil            string  `json:"paid_until"`
-	DiskQuota            float64 `json:"disk_quota"`
-	DiskUsage            float64 `json:"disk_usage"`
-	DiskUsageData        float64 `json:"disk_usage_data"`
-	DiskUsageSnapshots   float64 `json:"disk_usage_snapshots"`
-	Webdav               bool    `json:"webdav"`
-	Samba                bool    `json:"samba"`
-	SSH                  bool    `json:"ssh"`
-	BackupService        bool    `json:"backup_service"`
-	ExternalReachability bool    `json:"external_reachability"`
-	Zfs                  bool    `json:"zfs"`
-	Server               string  `json:"server"`
-}
-
 var (
-	hetznerUsername string
-	hetznerPassword string
-	boxes           []Storagebox
-	labels          = []string{"id", "name", "product", "server"}
-	diskQuota       = prometheus.NewGaugeVec(
+	hetznerToken string
+	listenAddr   string
+	labels       = []string{"id", "name", "product", "server"}
+	diskQuota    = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "storagebox",
 			Name:      "disk_quota",
-			Help:      "Total diskspace in MB",
+			Help:      "Total diskspace in Bytes",
 		},
 		labels,
 	)
-	diskUsage = prometheus.NewGaugeVec(
+	diskUsage = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "storagebox",
 			Name:      "disk_usage",
-			Help:      "Total used diskspace in MB",
+			Help:      "Total used diskspace in Bytes",
 		},
 		labels,
 	)
-	diskUsageData = prometheus.NewGaugeVec(
+	diskUsageData = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "storagebox",
 			Name:      "disk_usage_data",
-			Help:      "Used diskspace by files in MB",
+			Help:      "Used diskspace by files in Bytes",
 		},
 		labels,
 	)
-	diskUsageSnapshots = prometheus.NewGaugeVec(
+	diskUsageSnapshots = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "storagebox",
 			Name:      "disk_usage_snapshots",
-			Help:      "Used diskspace by snapshots in MB",
+			Help:      "Used diskspace by snapshots in Bytes",
 		},
 		labels,
 	)
 )
 
-func updateBoxes() {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://robot-ws.your-server.de/storagebox", nil)
-	req.SetBasicAuth(hetznerUsername, hetznerPassword)
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	bodyText, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != 200 {
-		var apiErr APIError
-		err = json.Unmarshal(bodyText, &apiErr)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("API Error: %d - %s", apiErr.Error.Status, apiErr.Error.Code)
-		return
-	}
-
-	var apiResponse APIBoxList
-	err = json.Unmarshal(bodyText, &apiResponse)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, entry := range apiResponse {
-		req, err := http.NewRequest("GET", fmt.Sprintf("https://robot-ws.your-server.de/storagebox/%d", entry.Box.ID), nil)
-		req.SetBasicAuth(hetznerUsername, hetznerPassword)
-		resp, err = client.Do(req)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		bodyText, err := ioutil.ReadAll(resp.Body)
-		if resp.StatusCode != 200 {
-			var apiErr APIError
-			err = json.Unmarshal(bodyText, &apiErr)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Printf("API Error: %d - %s", apiErr.Error.Status, apiErr.Error.Code)
-			return
-		}
-
-		var box APIBoxDetail
-		err = json.Unmarshal(bodyText, &box)
-		if err != nil {
-			log.Fatal(err)
-		}
-		boxes = append(boxes, box.Box)
-	}
-}
-
 func updateMetrics() {
 	for {
-		updateBoxes()
+		boxes, err := hetzner.GetBoxes()
+		if err != nil {
+			log.Println("Failed to get storageboxes!")
+		}
 		for _, box := range boxes {
 			diskQuota.With(prometheus.Labels{
 				"id":      strconv.Itoa(box.ID),
 				"name":    box.Name,
-				"product": box.Product,
+				"product": box.StorageBoxType.Description,
 				"server":  box.Server,
-			}).Set(box.DiskQuota)
+			}).Set(float64(box.StorageBoxType.Size))
 
 			diskUsage.With(prometheus.Labels{
 				"id":      strconv.Itoa(box.ID),
 				"name":    box.Name,
-				"product": box.Product,
+				"product": box.StorageBoxType.Description,
 				"server":  box.Server,
-			}).Set(box.DiskUsage)
+			}).Set(float64(box.Stats.Size))
 
 			diskUsageData.With(prometheus.Labels{
 				"id":      strconv.Itoa(box.ID),
 				"name":    box.Name,
-				"product": box.Product,
+				"product": box.StorageBoxType.Description,
 				"server":  box.Server,
-			}).Set(box.DiskUsageData)
+			}).Set(float64(box.Stats.SizeData))
 
 			diskUsageSnapshots.With(prometheus.Labels{
 				"id":      strconv.Itoa(box.ID),
 				"name":    box.Name,
-				"product": box.Product,
+				"product": box.StorageBoxType.Description,
 				"server":  box.Server,
-			}).Set(box.DiskUsageSnapshots)
+			}).Set(float64(box.Stats.SizeSnapshots))
 
 		}
 
@@ -188,26 +96,24 @@ func updateMetrics() {
 	}
 }
 
-const (
-	listenAddr = ":9509"
-)
-
 func main() {
-	hetznerUsername = os.Getenv("HETZNER_USER")
-	hetznerPassword = os.Getenv("HETZNER_PASS")
+	hetznerToken = os.Getenv("HETZNER_TOKEN")
 
-	if hetznerUsername == "" || hetznerPassword == "" {
-		log.Fatal("Please provide HETZNER_USER and HETZNER_PASS as environment variables")
+	if hetznerToken == "" {
+		log.Fatal("Please provide HETZNER_TOKEN as environment variables")
 	}
 
-	prometheus.MustRegister(diskQuota)
-	prometheus.MustRegister(diskUsage)
-	prometheus.MustRegister(diskUsageData)
-	prometheus.MustRegister(diskUsageSnapshots)
+	listenAddr = os.Getenv("LISTEN_ADDR")
+	if listenAddr == "" {
+		listenAddr = ":9509"
+	}
+
+	hetzner.Client = req.C()
+	hetzner.Client.SetCommonBearerAuthToken(hetznerToken)
 
 	go updateMetrics()
 
-	fmt.Printf("Listening on %q", listenAddr)
+	log.Printf("Listening on %q", listenAddr)
 	http.Handle("/metrics", promhttp.Handler())
 	http.ListenAndServe(listenAddr, nil)
 }
