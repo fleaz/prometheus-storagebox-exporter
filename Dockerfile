@@ -1,8 +1,13 @@
-FROM golang:alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:alpine AS builder
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
 RUN apk --no-cache add ca-certificates
 WORKDIR /go/src/prometheus-storagebox-exporter
 COPY . /go/src/prometheus-storagebox-exporter
-RUN CGO_ENABLED=0 go build -ldflags '-extldflags "-static"'
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags '-extldflags "-static"' -o prometheus-storagebox-exporter
 
 FROM scratch
 LABEL org.opencontainers.image.title=prometheus-storagebox-exporter
