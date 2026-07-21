@@ -2,7 +2,7 @@ package hetzner
 
 import (
 	"context"
-	"log"
+	"time"
 
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 )
@@ -12,24 +12,10 @@ var (
 )
 
 func GetBoxes() ([]*hcloud.StorageBox, error) {
-
-	boxes, err := Client.StorageBox.All(context.Background())
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	boxes, err := Client.StorageBox.All(ctx)
 	if err != nil {
-		log.Fatalf("error retrieving server: %s\n", err)
+		return nil, err
 	}
-
-	// bodyText, err := io.ReadAll(resp.Body)
-	//
-	// if resp.StatusCode != 200 {
-	// 	log.Printf("API Error %d: %s\n", resp.StatusCode, bodyText)
-	// 	return nil, errors.New("HTTP Error")
-	// }
-	//
-	// var apiResponse APIReponse
-	// err = json.Unmarshal(bodyText, &apiResponse)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
 	return boxes, nil
 }

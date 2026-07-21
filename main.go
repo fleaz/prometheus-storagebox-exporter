@@ -57,7 +57,13 @@ func updateMetrics() {
 	for {
 		boxes, err := hetzner.GetBoxes()
 		if err != nil {
-			log.Println("Failed to get storageboxes!")
+			log.Printf("ERROR: Failed to get storageboxes: %s\n", err)
+
+			// Delete all metrics so we don't serve stale data
+			diskQuota.Reset()
+			diskUsage.Reset()
+			diskUsageData.Reset()
+			diskUsageSnapshots.Reset()
 		}
 		for _, box := range boxes {
 			diskQuota.With(prometheus.Labels{
